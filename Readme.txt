@@ -20,3 +20,7 @@ This is an integrated mqtt.vb into uMD.gui which UMD.gui calles
 - Need to test with getting continued data -> Need to check if it keeps connecting and reconnecting to the server
 
 - Need to implement a voltage controller that uses moku api to change the voltage used for pizo (current)
+
+Demonstration:
+Wave form generator: https://youtu.be/I9tKcj1S6GI
+Distorting wave: https://youtu.be/Mia1GC_gaJg
