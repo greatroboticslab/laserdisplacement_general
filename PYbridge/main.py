@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import signal
+import keyboard as ky
 import pandas as pd
 from parse_data import To_Csv
 from moku_device import Ctrl_Moku
