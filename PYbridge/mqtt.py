@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 class Mqtt():
     def __init__(self): 
         # Full path to your compiled VB.NET executable
-        exe_path = r"C:\Users\thang\source\repos\greatroboticslab\laserdisplacement\PYbridge\uMD_GUI.exe"
+        exe_path = r"C:\Users\realvolney\source\repos\greatroboticslab\laserdisplacement\uMD_GUI-30-Dec-7.29PM-20250316T042754Z-001\uMD_GUI-30-Dec-7.29PM\bin\Debug\uMD_GUI.exe
         # Launch the .exe
         subprocess.Popen(exe_path)
 
