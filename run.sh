@@ -21,8 +21,11 @@ MAIN_PY_WIN=$(wslpath -w "$MAIN_PY")
 
 POWERSHELL="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
 
+# ---- RESTORE PACKAGES ----
+"$POWERSHELL" -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' /t:Restore"
+
 # ---- BUILD VB ----
-"$POWERSHELL" -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' '/p:Configuration=$CONFIG' '/m'"
+"$POWERSHELL" -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' /p:Configuration=$CONFIG /m"
 
 # ---- RUN VB EXE (background) ----
 "$POWERSHELL" -NoProfile -Command "Start-Process -FilePath '$VBEXE_WIN'"
@@ -33,4 +36,3 @@ POWERSHELL="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
 
 # ---- RUN PYTHON ----
 "$POWERSHELL" -NoProfile -Command "& '$PYEXE_WIN' '$MAIN_PY_WIN'"
-
