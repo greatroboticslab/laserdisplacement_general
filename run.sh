@@ -1,32 +1,66 @@
 #!/bin/bash
 set -euo pipefail
 
+# ---- EDIT THESE ONCE ----
 SOLUTION_ROOT="/mnt/c/Users/realvolney/source/repos/greatroboticslab/laserdisplacement/uMD_GUI-30-Dec-7.29PM-20250316T042754Z-001/uMD_GUI-30-Dec-7.29PM"
 MSBUILD="/mnt/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/arm64/MSBuild.exe"
 CONFIG="Debug"
 
-PYEXE="/mnt/c/Users/realvolney/AppData/Local/Programs/Python/Python311/python.exe"   # adjust if needed
-PYTHON_DIR="/mnt/c/Users/realvolney/laser/umd2Vcontrol/PYbridge"
+PYTHON_DIR="/mnt/c/Users/realvolney/source/repos/greatroboticslab/laserdisplacement/PYbridge"
 MAIN_PY="$PYTHON_DIR/main.py"
+VENV="$HOME/.venvs/umd"
+POWERSHELL="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+# -------------------------
 
 VBPROJ_WIN=$(wslpath -w "$SOLUTION_ROOT/uMD_GUI.vbproj")
 MSBUILD_WIN=$(wslpath -w "$MSBUILD")
 VBEXE_WIN=$(wslpath -w "$SOLUTION_ROOT/bin/$CONFIG/uMD_GUI.exe")
-PYEXE_WIN=$(wslpath -w "$PYEXE")
-REQS_WIN=$(wslpath -w "$PYTHON_DIR/requirements.txt")
-MAIN_PY_WIN=$(wslpath -w "$MAIN_PY")
-POWERSHELL="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+ps() { "$POWERSHELL" -NoProfile -Command "$@"; }
 
-# 0) KILL any running uMD_GUI.exe so the copy step won’t fail
-"$POWERSHELL" -NoProfile -Command "taskkill /IM uMD_GUI.exe /F /T 2>\$null; exit 0"
+echo "[VB] Kill any existing uMD_GUI.exe (ignore errors)"
+ps "taskkill /IM uMD_GUI.exe /F /T 2>\$null; exit 0"
 
-# 1) RESTORE + BUILD (single invocation)
-"$POWERSHELL" -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' '/t:Restore,Build' '/p:Configuration=$CONFIG' '/m'"
+echo "[VB] Restore + Build"
+/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' /restore /p:Configuration=$CONFIG /m"
 
-# 2) START the app (background)
-"$POWERSHELL" -NoProfile -Command "Start-Process -FilePath '$VBEXE_WIN'"
+echo "[VB] Launching EXE"
+ps "Start-Process -FilePath '$VBEXE_WIN'"
 
-# 3) PY deps + run
-"$POWERSHELL" -NoProfile -Command "& '$PYEXE_WIN' -m pip install --upgrade pip"
-"$POWERSHELL" -NoProfile -Command "& '$PYEXE_WIN' -m pip install -r '$REQS_WIN'"
-"$POWERSHELL" -NoProfile -Command "& '$PYEXE_WIN' '$MAIN_PY_WIN'"
+echo "[PY] Ensure python3-venv is installed (one-time)"
+if ! dpkg -s python3-venv >/dev/null 2>&1; then
+  sudo apt update
+  sudo apt install -y python3-venv
+fi
+
+echo "[PY] Ensure venv exists at $VENV"
+if [ ! -d "$VENV" ]; then
+  python3 -m venv "$VENV" || true
+fi
+
+# ---- Bootstrap pip inside the venv if missing ----
+if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
+  echo "[PY] pip missing in venv; trying ensurepip"
+  "$VENV/bin/python" -m ensurepip --upgrade || true
+fi
+
+# If pip still missing, install the full Python components and recreate/repair
+if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
+  echo "[PY] ensurepip unavailable; installing python3-full (one-time, needs sudo)"
+  sudo apt update
+  sudo apt install -y python3-full
+  # recreate venv to pick up ensurepip
+  rm -rf "$VENV"
+  python3 -m venv "$VENV"
+  "$VENV/bin/python" -m ensurepip --upgrade
+fi
+
+# --- Moku CLI environment setup (short version) ---
+if command -v mokucli >/dev/null 2>&1; then
+    export MOKU_CLI_PATH="$(command -v mokucli)"
+    echo "[MOKU] Found mokucli in PATH: $MOKU_CLI_PATH"
+fi
+
+echo "[PY] Install deps and run"
+"$VENV/bin/python" -m pip install --upgrade pip
+"$VENV/bin/python" -m pip install -r "$PYTHON_DIR/requirements.txt"
+"$VENV/bin/python" "$MAIN_PY"
