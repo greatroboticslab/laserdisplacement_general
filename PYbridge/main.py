@@ -1,4 +1,3 @@
-﻿
 import os
 import queue
 import sys
@@ -51,8 +50,6 @@ def main():
         Ki = 0.05
         Kd = 0.0
         
-        
-        
         moku.set_waveform(
             channel=1,
             type_="Sine",
@@ -79,16 +76,13 @@ def main():
         safe = 5.0 - amp_vpp/2.0  # => 2.5 V
         pid_controller.out_min, pid_controller.out_max = -safe, +safe
 
-
         #------------ While getting data
         while not stop_flag: #while stop flag isnt triggered, keep getting data
-            
             try:
                 #get sensor wave data
                 item = mqtt.q.get(timeout=0.01)  # Get the latest value from MQTT; 
                 if isinstance(item, tuple):
                     ts, raw_data = item
-
                 else:
                     ts, raw_data = time.time(), item # Get the current timestamp if not provided
 
@@ -114,7 +108,7 @@ def main():
                     err = process_data.sine_process(buffer_vals)
                     pid_out  = pid_controller.update(err)
                     off_set  = low_filter.update(pid_out)
-                    moku.set_voltage(off_set)
+                    moku.set_voltage(off_set)  # <-- direct hardware write
 
                     # 4) Sine health frequent 0.5
                     now = time.time()
@@ -122,7 +116,6 @@ def main():
                         # Normalize window to -1,1 before fitting
                         w = np.array(buffer_vals, dtype=float)
                         w_min, w_max = float(w.min()), float(w.max())
-                        
                         if w_max > w_min:
                             w_norm = (2.0*(w - w_min)/(w_max - w_min)) - 1.0
                         else:
@@ -136,7 +129,6 @@ def main():
                         
                         last_report = now
 
-
             except queue.Empty:
                 pass
 
@@ -148,3 +140,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

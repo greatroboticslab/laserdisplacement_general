@@ -92,4 +92,3 @@ class Process_Data():
         # Error = latest normalized value minus latest sine value
         current_error = float(df['normalized'].iloc[-1] - df['sine'].iloc[-1])
         return current_error
-

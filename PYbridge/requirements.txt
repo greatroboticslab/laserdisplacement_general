@@ -1,0 +1,5 @@
+numpy
+paho-mqtt
+moku
+pandas
+scikit-learn

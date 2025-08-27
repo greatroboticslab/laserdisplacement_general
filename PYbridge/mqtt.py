@@ -9,9 +9,9 @@ import paho.mqtt.client as mqtt
 class Mqtt():
     def __init__(self): 
         # Full path to your compiled VB.NET executable
-        exe_path = r"C:\Users\realvolney\source\repos\greatroboticslab\laserdisplacement\uMD_GUI-30-Dec-7.29PM-20250316T042754Z-001\uMD_GUI-30-Dec-7.29PM\bin\Debug\uMD_GUI.exe
+        #exe_path = "/mnt/c/Users/realvolney/source/repos/greatroboticslab/laserdisplacement/uMD_GUI-30-Dec-7.29PM-20250316T042754Z-001/uMD_GUI-30-Dec-7.29PM/bin/Debug/uMD_GUI.exe"
         # Launch the .exe
-        subprocess.Popen(exe_path)
+       # subprocess.Popen([exe_path])
 
         self.value = 0.0  # Initialize value to 0.0
         self.q = queue.Queue(maxsize=10000)  # Initialize a queue to hold messages
