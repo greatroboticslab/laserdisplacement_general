@@ -1,4 +1,4 @@
-import os
+﻿import os
 import queue
 import sys
 import time
@@ -108,7 +108,7 @@ def main():
                     err = process_data.sine_process(buffer_vals)
                     pid_out  = pid_controller.update(err)
                     off_set  = low_filter.update(pid_out)
-                    moku.set_voltage(off_set)  # <-- direct hardware write
+                    # moku.set_voltage(off_set)  # <-- direct hardware write
 
                     # 4) Sine health frequent 0.5
                     now = time.time()
