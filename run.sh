@@ -58,31 +58,14 @@ fi
 # --- Moku CLI environment setup (auto-download + detect binary + symlink) ---
 # --- Moku CLI environment setup (install inside venv/bin) ---
 set +e
-MOKUCLI_BIN="$VENV/bin/mokucli"
-
-if [ ! -f "$MOKUCLI_BIN" ]; then
-  echo "[MOKU] mokucli not found in venv, downloading..."
-  cd "$PYTHON_DIR"
-  wget -q https://apis.liquidinstruments.com/cli/mokucli-linux-x64-latest.tar.gz -O mokucli.tar.gz
-  tar -xvzf mokucli.tar.gz
-
-  # auto-detect the extracted binary
-  DETECTED_BIN=$(find "$PYTHON_DIR" -type f -name "mokucli" | head -n 1)
-  if [ -n "$DETECTED_BIN" ]; then
-    cp "$DETECTED_BIN" "$MOKUCLI_BIN"
-    chmod +x "$MOKUCLI_BIN"
-    echo "[MOKU] Installed mokucli into $MOKUCLI_BIN"
-  else
-    echo "[MOKU] ERROR: Could not detect mokucli binary after extraction."
-  fi
-fi
-
-if [ -f "$MOKUCLI_BIN" ]; then
-  export MOKU_CLI_PATH="$MOKUCLI_BIN"
-  echo "[MOKU] Using mokucli from venv: $MOKU_CLI_PATH"
+# --- Use macOS-installed mokucli ---
+if [ -x /usr/local/bin/mokucli ]; then
+  export MOKU_CLI_PATH="/usr/local/bin/mokucli"
+  echo "[MOKU] Using macOS mokucli at $MOKU_CLI_PATH"
 else
-  echo "[MOKU] WARNING: mokucli not available; Python will still run."
+  echo "[MOKU] WARNING: mokucli not found on macOS; Python may warn or fail."
 fi
+
 
 set -e
 
