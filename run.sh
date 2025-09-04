@@ -54,11 +54,40 @@ if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
   "$VENV/bin/python" -m ensurepip --upgrade
 fi
 
-# --- Moku CLI environment setup (short version) ---
-if command -v mokucli >/dev/null 2>&1; then
-    export MOKU_CLI_PATH="$(command -v mokucli)"
-    echo "[MOKU] Found mokucli in PATH: $MOKU_CLI_PATH"
+# --- Moku CLI environment setup (Option 1: auto-download + symlink) ---
+# --- Moku CLI environment setup (auto-download + detect binary + symlink) ---
+MOKUCLI_BIN="$PYTHON_DIR/mokucli"
+
+if [ ! -f "$MOKUCLI_BIN" ]; then
+  echo "[MOKU] mokucli not found, downloading..."
+  cd "$PYTHON_DIR"
+  wget -q https://apis.liquidinstruments.com/cli/mokucli-linux-x64-latest.tar.gz -O mokucli.tar.gz
+  tar -xvzf mokucli.tar.gz
+
+  # auto-detect the extracted binary
+  DETECTED_BIN=$(find "$PYTHON_DIR" -type f -name "mokucli" | head -n 1)
+  if [ -n "$DETECTED_BIN" ]; then
+    MOKUCLI_BIN="$DETECTED_BIN"
+    chmod +x "$MOKUCLI_BIN"
+    echo "[MOKU] Detected mokucli binary at $MOKUCLI_BIN"
+  else
+    echo "[MOKU] ERROR: Could not detect mokucli binary after extraction."
+  fi
 fi
+
+if [ -f "$MOKUCLI_BIN" ]; then
+  echo "[MOKU] Installing symlink to /usr/local/bin"
+  sudo ln -sf "$MOKUCLI_BIN" /usr/local/bin/mokucli
+fi
+
+if command -v mokucli >/dev/null 2>&1; then
+  export MOKU_CLI_PATH="$(command -v mokucli)"
+  echo "[MOKU] Found mokucli in PATH: $MOKU_CLI_PATH"
+else
+  echo "[MOKU] ERROR: mokucli still not available!"
+fi
+
+
 
 echo "[PY] Install deps and run"
 "$VENV/bin/python" -m pip install --upgrade pip
