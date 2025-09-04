@@ -10,6 +10,7 @@ PYTHON_DIR="/mnt/c/Users/realvolney/source/repos/greatroboticslab/laserdisplacem
 MAIN_PY="$PYTHON_DIR/main.py"
 VENV="$HOME/.venvs/umd"
 POWERSHELL="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+MARKER="$VENV/.deps-installed"
 # -------------------------
 
 VBPROJ_WIN=$(wslpath -w "$SOLUTION_ROOT/uMD_GUI.vbproj")
@@ -21,7 +22,7 @@ echo "[VB] Kill any existing uMD_GUI.exe (ignore errors)"
 ps "taskkill /IM uMD_GUI.exe /F /T 2>\$null; exit 0"
 
 echo "[VB] Restore + Build"
-/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' /restore /p:Configuration=$CONFIG /m"
+"$POWERSHELL" -NoProfile -Command "& '$MSBUILD_WIN' '$VBPROJ_WIN' /restore /p:Configuration=$CONFIG /m"
 
 echo "[VB] Launching EXE"
 ps "Start-Process -FilePath '$VBEXE_WIN'"
@@ -34,7 +35,7 @@ fi
 
 echo "[PY] Ensure venv exists at $VENV"
 if [ ! -d "$VENV" ]; then
-  python3 -m venv "$VENV" || true
+  python3 -m venv "$VENV"
 fi
 
 # ---- Bootstrap pip inside the venv if missing ----
@@ -43,35 +44,36 @@ if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
   "$VENV/bin/python" -m ensurepip --upgrade || true
 fi
 
-# If pip still missing, install the full Python components and recreate/repair
+# If pip still missing, install full Python and recreate
 if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
   echo "[PY] ensurepip unavailable; installing python3-full (one-time, needs sudo)"
   sudo apt update
   sudo apt install -y python3-full
-  # recreate venv to pick up ensurepip
   rm -rf "$VENV"
   python3 -m venv "$VENV"
   "$VENV/bin/python" -m ensurepip --upgrade
 fi
 
-# --- Moku CLI environment setup (Option 1: auto-download + symlink) ---
-# --- Moku CLI environment setup (auto-download + detect binary + symlink) ---
-# --- Moku CLI environment setup (install inside venv/bin) ---
-set +e
-# --- Use macOS-installed mokucli ---
-if [ -x /usr/local/bin/mokucli ]; then
-  export MOKU_CLI_PATH="/usr/local/bin/mokucli"
-  echo "[MOKU] Using macOS mokucli at $MOKU_CLI_PATH"
+# --- Moku CLI environment setup (use Windows mokucli.exe) ---
+MOKUCLI_WIN="/mnt/c/Program Files/Liquid Instruments/Moku CLI/mokucli.exe"
+
+if [ -x "$MOKUCLI_WIN" ]; then
+  export MOKU_CLI_PATH="$MOKUCLI_WIN"
+  echo "[MOKU] Using Windows mokucli at $MOKU_CLI_PATH"
 else
-  echo "[MOKU] WARNING: mokucli not found on macOS; Python may warn or fail."
+  echo "[MOKU] ERROR: mokucli.exe not found at $MOKUCLI_WIN"
 fi
 
+# ---- Install dependencies only once (when internet available) ----
+if [ ! -f "$MARKER" ]; then
+  echo "[PY] Installing/updating dependencies (internet required)..."
+  "$VENV/bin/python" -m pip install --upgrade pip || true
+  "$VENV/bin/python" -m pip install -r "$PYTHON_DIR/requirements.txt" || true
+  touch "$MARKER"
+else
+  echo "[PY] Dependencies already installed; skipping pip."
+fi
 
-set -e
-
-
-
-echo "[PY] Install deps and run"
-"$VENV/bin/python" -m pip install --upgrade pip
-"$VENV/bin/python" -m pip install -r "$PYTHON_DIR/requirements.txt"
+# ---- Run Python ----
+echo "[PY] Running $MAIN_PY"
 "$VENV/bin/python" "$MAIN_PY"

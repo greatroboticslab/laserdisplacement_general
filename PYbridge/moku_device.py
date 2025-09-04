@@ -1,14 +1,15 @@
-
 from moku.instruments import WaveformGenerator
-
-
 
 class Ctrl_Moku():
     """
-    This class will call moku api to change the voltage of the pizo
+    This class will call Moku API to change the voltage of the piezo.
+    Automatically detects connection type:
+    - Tries USB first
+    - Falls back to Wi-Fi if no USB device is found
     """
-    def __init__(self):
-        self.ip = "192.168.73.1"
+
+    def __init__(self, ip="192.168.73.1"):
+        self.ip = ip
 
         # Desired waveform defaults (you can override from main)
         self.CHANNEL = 1
@@ -22,31 +23,37 @@ class Ctrl_Moku():
         self.FREQ_MIN, self.FREQ_MAX     = 1e-3, 20e6
         self.OFFSET_MIN, self.OFFSET_MAX = -5.0, 5.0
 
-        self.try_connect = self.connect()   
-
+        self.try_connect = self.connect()
 
     def connect(self):
+        """Try USB first, fall back to Wi-Fi."""
         try:
-            self.inst = WaveformGenerator(self.ip, force_connect=True)
-            print("Connected to Moku")
-            self.inst.set_defaults()  # reset instrument
-            # Prefer HiZ termination when driving a high-impedance load to achieve full Vpp/offset
+            print("Trying USB connection to Moku...")
+            self.inst = WaveformGenerator()  # auto-detect USB
+            print("Connected to Moku via USB")
+        except Exception as usb_err:
+            print(f"USB connection failed: {usb_err}")
             try:
+                print(f"Trying Wi-Fi connection at {self.ip}...")
+                self.inst = WaveformGenerator(self.ip, force_connect=True)
+                print("Connected to Moku via Wi-Fi")
+            except Exception as wifi_err:
+                print(f"Wi-Fi connection failed: {wifi_err}")
+                self.inst = None
+                return
+
+        # Initialize instrument if connection worked
+        if self.inst:
+            try:
+                self.inst.set_defaults()
                 self.inst.set_output_termination(channel=self.CHANNEL, termination="HiZ")
             except Exception as e:
-                print(f"Warning: set_output_termination not applied: {e}")
-        except Exception as e:
-            print(f"Error connecting to Moku device: {e}")
-            self.inst = None
+                print(f"Warning: post-connect setup not applied: {e}")
 
     def _clamp(self, v, vmin, vmax):
         return max(vmin, min(vmax, float(v)))
 
     def set_waveform(self, channel=None, type_=None, amplitude=None, frequency=None, offset=None, phase=None):
-        """
-        Configure the generator following API parameter semantics:
-        - amplitude is Vpp, frequency in Hz, offset in V, phase in degrees.
-        """
         if self.inst is None:
             print("Moku not connected; skipping set_waveform.")
             return
@@ -63,20 +70,17 @@ class Ctrl_Moku():
 
         kwargs = dict(channel=ch, type=typ, amplitude=amp, frequency=freq, offset=ofs)
         if phase is not None:
-            # phase allowed 0..360 deg per docs
             kwargs["phase"] = float(phase)
 
         try:
-            self.inst.generate_waveform(**kwargs)  # conforms to API
-            print(f"Waveform set: ch={ch}, type={typ}, amp(Vpp)={amp}, freq(Hz)={freq}, offset(V)={ofs}" + (f", phase={kwargs.get('phase')}" if "phase" in kwargs else ""))
+            self.inst.generate_waveform(**kwargs)
+            print(f"Waveform set: ch={ch}, type={typ}, amp(Vpp)={amp}, freq(Hz)={freq}, offset(V)={ofs}" +
+                  (f", phase={kwargs.get('phase')}" if "phase" in kwargs else ""))
         except Exception as e:
             print(f"Error in generate_waveform: {e}")
 
     def set_voltage(self, dc_level):
-        """
-        Your PID drives 'offset'. Keep amplitude/frequency constant,
-        only update 'offset' within [-5, +5] V
-        """
+        """PID loop drives offset; only update offset within [-5, +5] V"""
         self.set_waveform(offset=dc_level)
 
     def disconnect(self):
