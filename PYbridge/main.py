@@ -138,6 +138,18 @@ def main():
         print(f"error in main.py: {e}")
         sys.exit(0)
 
+    finally:
+        print("Cleaning up...")
+        if mqtt:
+            try:
+                mqtt.cli.loop_stop()
+                mqtt.cli.disconnect()
+                print("MQTT disconnected")
+            except Exception as e:
+                print(f"Error stopping MQTT: {e}")
+        if moku:
+            moku.disconnect()
+
 if __name__ == "__main__":
     main()
 

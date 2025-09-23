@@ -84,7 +84,15 @@ class Ctrl_Moku():
         self.set_waveform(offset=dc_level)
 
     def disconnect(self):
-        pass
+        if self.inst:
+            try:
+                self.inst.close()
+                print("Disconnected from Moku:Go")
+            except Exception as e:
+                print(f"Error during Moku disconnect: {e}")
+            finally:
+                self.inst = None
+
 
     def __enter__(self):
         return self
